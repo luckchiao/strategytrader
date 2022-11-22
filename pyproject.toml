@@ -1,0 +1,33 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "strategytrader"
+authors = [{name = "chiao", email = "luckchiao@gmail.com"}]
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dynamic = ["version", "description"]
+dependencies = [
+    "shioaji",
+    "loguru",
+]
+requires-python = ">=3.6"
+[project.optional-dependencies]
+    test = [
+        "black",
+        "pytest>=7.1.2",
+        "pytest-freezegun",
+        "pytest-mock",
+        "pytest-cov",
+        "codecov",
+    ]        
+    doc = ["sphinx"]
