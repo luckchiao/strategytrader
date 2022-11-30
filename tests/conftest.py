@@ -7,6 +7,7 @@ import datetime
 from shioaji import Exchange
 from .quote import QuoteSTKv1
 from strategytrader.trader import StrategyTrader
+from strategytrader.strategy import Strategy
 
 
 @pytest.fixture
@@ -26,6 +27,14 @@ def sj_api():
     api = sj.Shioaji()
     api.Contracts = read_contracts_pkl()
     return api
+
+
+@pytest.fixture
+def strategy(sj_api: sj.Shioaji, quote_data):
+    strategy = Strategy(
+        contract=sj_api.Contracts.Stocks["1795"], amount=5000000
+    )
+    return strategy
 
 
 @pytest.fixture
@@ -125,3 +134,25 @@ def tftorder_data():
         },
     }
     return tftorder
+
+
+@pytest.fixture
+def tftdeal_data():
+    tftdeal = {
+        "trade_id": "c8864e05",
+        "seqno": "422258",
+        "ordno": "IA129",
+        "exchange_seq": "186586",
+        "broker_id": "9A9g",
+        "account_id": "0173750",
+        "action": "Sell",
+        "code": "1795",
+        "order_cond": "ShortSelling",
+        "order_lot": "Common",
+        "price": 219,
+        "quantity": 1,
+        "web_id": "137",
+        "custom_field": "",
+        "ts": 1669254154,
+    }
+    return tftdeal

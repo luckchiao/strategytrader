@@ -1,9 +1,13 @@
 from loguru import logger
 from decimal import Decimal
+import datetime
 import pytest
 import shioaji as sj
 from shioaji.constant import OrderState
 from strategytrader.trader import StrategyTrader
+from strategytrader.strategy import Strategy
+from shioaji.order import Trade, Order, Account, OrderStatus
+from shioaji.contracts import Stock
 
 
 def test_add_strategy(trader: StrategyTrader, sj_api: sj.Shioaji):
@@ -56,7 +60,7 @@ testdata_order_handler = [
                 "price_type": "LMT",
                 "order_cond": "Cash",
                 "order_lot": "Common",
-                "custom_field": "216.02",
+                "custom_field": "st",
             },
             "status": {
                 "id": "0e9161dd",
@@ -98,7 +102,7 @@ testdata_order_handler = [
                 "price_type": "LMT",
                 "order_cond": "Cash",
                 "order_lot": "Common",
-                "custom_field": "216.02",
+                "custom_field": "st",
             },
             "status": {
                 "id": "0e9161dd",
@@ -129,6 +133,7 @@ def test_order_handler(
     raw_data,
     call_times,
     quote_data,
+    tftdeal_data,
     mocker,
 ):
     mocker_place_order = mocker.patch.object(sj_api, "place_order")
@@ -142,3 +147,112 @@ def test_order_handler(
         mocker_place_order.assert_not_called()
     elif call_times == 1:
         mocker_place_order.assert_called_once()
+        mocker_fuc = mocker.patch(
+            "strategytrader.strategy.Strategy.apply_deal_qty"
+        )
+        trader.order_handler(order_state=OrderState.TFTDeal, msg=tftdeal_data)
+        mocker_fuc.assert_called_once()
+
+
+def test_run_after_update_order(
+    trader: StrategyTrader,
+    strategy: Strategy,
+    sj_api: sj.Shioaji,
+    mocker,
+):
+
+    strategy.trade = Trade(
+        contract=Stock(
+            exchange="TSE",
+            code="1795",
+            symbol="TSE1795",
+            name="美時",
+            category="22",
+            unit=1000,
+            limit_up=271.0,
+            limit_down=222.0,
+            reference=246.5,
+            update_date="2022/11/29",
+            margin_trading_balance=264,
+            short_selling_balance=1,
+        ),
+        order=Order(
+            action="Buy",
+            price=222,
+            quantity=2,
+            id="af9eb35e",
+            seqno="797667",
+            ordno="IK695",
+            account=Account(
+                account_type="S",
+                person_id="",
+                broker_id="9A95",
+                account_id="",
+                signed=True,
+            ),
+            price_type="LMT",
+            order_type="ROD",
+        ),
+        status=OrderStatus(
+            id="af9eb35e",
+            status="PendingSubmit",
+            status_code="0",
+            order_datetime=datetime.datetime(2022, 11, 29, 9, 47, 4),
+            msg="委託成功",
+            deals=[],
+        ),
+    )
+    mocker_fuc = mocker.patch(
+        "strategytrader.strategy.Strategy.update_trade_price"
+    )
+    mocker_fuc.return_value = 223
+    mocker_update_status = mocker.patch.object(sj_api, "update_status")
+    mocker_update_order = mocker.patch.object(sj_api, "update_order")
+    mocker_update_order.return_value = Trade(
+        contract=Stock(
+            exchange="TSE",
+            code="1795",
+            symbol="TSE1795",
+            name="美時",
+            category="22",
+            unit=1000,
+            limit_up=271.0,
+            limit_down=222.0,
+            reference=246.5,
+            update_date="2022/11/29",
+            margin_trading_balance=264,
+            short_selling_balance=1,
+        ),
+        order=Order(
+            action="Buy",
+            price=223,
+            quantity=2,
+            id="af9eb35e",
+            seqno="797667",
+            ordno="IK695",
+            account=Account(
+                account_type="S",
+                person_id="",
+                broker_id="9A95",
+                account_id="",
+                signed=True,
+            ),
+            price_type="LMT",
+            order_type="ROD",
+        ),
+        status=OrderStatus(
+            id="af9eb35e",
+            status="PendingSubmit",
+            status_code="0",
+            order_datetime=datetime.datetime(2022, 11, 29, 9, 47, 4),
+            msg="委託成功",
+            deals=[],
+        ),
+    )
+
+    trader.run_after_update_order(5, strategy)
+    mocker_update_status.assert_called_once()
+    mocker_update_order.assert_called_once()
+    assert (
+        mocker_update_order.return_value.order.price == mocker_fuc.return_value
+    )
